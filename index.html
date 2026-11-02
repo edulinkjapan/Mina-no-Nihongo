@@ -280,7 +280,7 @@ function result(){
 function teacher(){
  clearInterval(tick);document.body.classList.remove("inq");app.style.maxWidth="1100px";app.style.padding="";
  let pin="",tab="m",data=null,timer=null,fc="",q="",es=new Set([1]),en=20,et=20,em="x",eu=false,ename="",eshow=true,ok2=null,eclose="",editing=null,note="",elk=new Set(),elkInit=false,contacts=null,cq="",conly=false,redit=null,feedbacks=null,fbs="Mới",fbq="";
- const deriveElk=()=>new Set(parseL((data&&data.locked)||""));
+ const deriveElk=()=>new Set();
  try{pin=sessionStorage.getItem("minna_pin")||""}catch(e){}
  const pi=h("input",{type:"password",placeholder:"Mã PIN giáo viên",value:pin,style:"max-width:240px"}),msg=h("div",{class:"mute"}),vw=h("div",{class:"warn hide"}),box=h("div");
  const stop=()=>clearInterval(timer);
@@ -289,7 +289,7 @@ function teacher(){
   msg.textContent="Đang tải dữ liệu…";
   try{const d=await jsonp({pin});
    if(!d.ok){data=null;stop();box.replaceChildren();msg.textContent=d.err==="pin"?"Sai mã PIN.":"Lỗi: "+d.err;return}
-   data=d;vw.textContent="⚠ Mã Apps Script trên Google chưa phải bản mới nhất nên một số chức năng (khóa bài, sửa/xóa kết quả, lưu…) có thể chưa hoạt động. Hãy dán lại mã Apps Script mới và triển khai Phiên bản mới.";vw.classList.toggle("hide",d.ver>=9);msg.textContent="Cập nhật lúc "+new Date().toLocaleTimeString("vi-VN");try{sessionStorage.setItem("minna_pin",pin)}catch(e){}
+   data=d;vw.textContent="⚠ Mã Apps Script trên Google chưa phải bản mới nhất nên một số chức năng (khóa bài, sửa/xóa kết quả, lưu…) có thể chưa hoạt động. Hãy dán lại mã Apps Script mới và triển khai Phiên bản mới.";vw.classList.toggle("hide",d.ver>=10);msg.textContent="Cập nhật lúc "+new Date().toLocaleTimeString("vi-VN");try{sessionStorage.setItem("minna_pin",pin)}catch(e){}
    if(feedbacks===null&&d.ver>=9)loadFb();stop();timer=setInterval(()=>{const a=document.activeElement;if(!document.hidden&&(tab==="m"||tab==="r")&&!redit&&!(a&&a.tagName==="INPUT"&&box.contains(a)))load()},10000);draw()}
   catch(e){msg.textContent="Không tải được dữ liệu. Kiểm tra mạng và cách triển khai Apps Script."}
  }
@@ -366,9 +366,8 @@ function teacher(){
  function ex(){
   const sum=h("div",{class:"mute",style:"text-align:center"}),msg2=h("div",{class:"mute",style:"margin-top:8px"},note);note="";
   if(!data.exams)data.exams=[];
-  if(!elkInit){elk=deriveElk();elkInit=true}
-  const mlk=()=>[...es].filter(x=>elk.has(x)).sort((a,b)=>a-b);
-  const upd=()=>{const n=[...es].reduce((s,b)=>s+(cntL[b]||0),0);sum.textContent=es.size?"Đã chọn "+es.size+" bài · khoảng "+n+" câu · "+(mlk().length?"🔒 Khóa: Bài "+rangeTxt(mlk()):"🔓 Miễn phí"):"Chưa chọn bài nào"};
+  const mlk=()=>[...es].filter(x=>elk.has(x)).sort((a,b)=>a-b),lockOf=()=>mlk().length>0;
+  const upd=()=>{const n=[...es].reduce((s,b)=>s+(cntL[b]||0),0);sum.textContent=es.size?"Đã chọn "+es.size+" bài · khoảng "+n+" câu · "+(mlk().length?"🔒 Đề tạo ra sẽ bị khóa (bài "+rangeTxt(mlk())+")":"🔓 Đề tạo ra miễn phí"):"Chưa chọn bài nào"};
   const g=lessonGrid(es,upd,elk),rg=(a,b)=>()=>{es.clear();for(let i=a;i<=b;i++)es.add(i);g.paint();upd()};
   const quick=h("div",{class:"seg",style:"justify-content:center"},h("button",{onclick:rg(1,25)},"Tất cả"),h("button",{onclick:()=>{es.clear();g.paint();upd()}},"Bỏ chọn"),[[1,5],[6,10],[11,15],[16,20],[21,25]].map(([a,b])=>h("button",{onclick:rg(a,b)},"Bài "+a+"–"+b)));
   const nI=h("input",{type:"number",min:5,max:100,value:en,oninput:e=>{en=e.target.value}}),tI=h("input",{type:"number",min:0,max:180,value:et,oninput:e=>{et=e.target.value}}),
@@ -384,17 +383,17 @@ function teacher(){
   const resetForm=()=>{es=new Set([1]);en=20;et=20;em="x";eu=false;ename="";eshow=true;eclose="";elk=deriveElk()};
   const defName=c=>ename.trim()||lessonLabel(fmtL(c.ls));
   const mk=async()=>{const c=cfg();if(!need(c))return;
-   const code=genCode(),k=eu?5:1,seeds=genSeeds(k),row=[code,defName(c),fmtL(c.ls),c.n,c.t,c.mode,k,seeds,eshow?"Mở":"Ẩn",Date.now(),0,closeMs(),0];
+   const code=genCode(),k=eu?5:1,seeds=genSeeds(k),row=[code,defName(c),fmtL(c.ls),c.n,c.t,c.mode,k,seeds,eshow?"Mở":"Ẩn",Date.now(),0,closeMs(),lockOf()?1:0];
    data.exams.push(row);ok2={code,link:base()+"#de-"+code,k};draw();
-   try{const d=await jsonp({pin,action:"addexam",code,name:row[1],ls:row[2],n:c.n,t:c.t,mode:c.mode,k,seeds,hide:eshow?0:1,close:row[11]});if(!d.ok)throw 0}
+   try{const d=await jsonp({pin,action:"addexam",code,name:row[1],ls:row[2],n:c.n,t:c.t,mode:c.mode,k,seeds,hide:eshow?0:1,close:row[11],lock:row[12]});if(!d.ok)throw 0}
    catch(e){const i=data.exams.indexOf(row);if(i>=0)data.exams.splice(i,1);ok2=null;note="Không tạo được đề, hãy thử lại.";draw()}};
   const save=async()=>{const c=cfg();if(!need(c))return;const r=data.exams.find(x=>x[0]===editing);if(!r){editing=null;draw();return}
    const k=eu?5:1,seeds=(Number(r[6])===k&&r[7])?String(r[7]):genSeeds(k),old=r.slice(),code=editing;
-   r[1]=defName(c);r[2]=fmtL(c.ls);r[3]=c.n;r[4]=c.t;r[5]=c.mode;r[6]=k;r[7]=seeds;if(r[8]!=="Đóng")r[8]=eshow?"Mở":"Ẩn";r[11]=closeMs();
+   r[1]=defName(c);r[2]=fmtL(c.ls);r[3]=c.n;r[4]=c.t;r[5]=c.mode;r[6]=k;r[7]=seeds;if(r[8]!=="Đóng")r[8]=eshow?"Mở":"Ẩn";r[11]=closeMs();r[12]=lockOf()?1:0;
    editing=null;resetForm();draw();
-   try{const d=await jsonp({pin,action:"updateexam",code,name:r[1],ls:r[2],n:r[3],t:r[4],mode:r[5],k,seeds,hide:eshow?0:1,close:r[11]});if(!d.ok)throw 0;note="Đã cập nhật đề ✓";draw()}
+   try{const d=await jsonp({pin,action:"updateexam",code,name:r[1],ls:r[2],n:r[3],t:r[4],mode:r[5],k,seeds,hide:eshow?0:1,close:r[11],lock:r[12]});if(!d.ok)throw 0;note="Đã cập nhật đề ✓";draw()}
    catch(e){for(let i=0;i<old.length;i++)r[i]=old[i];note="Không lưu được thay đổi, hãy thử lại.";draw()}};
-  const startEdit=r=>{editing=r[0];ename=r[1]||"";es=new Set(parseL(r[2]));en=r[3];et=r[4];em=r[5]==="p"?"p":"x";eu=Number(r[6])>1;eshow=r[8]!=="Ẩn";eclose=r[11]>0?toLocal(r[11]):"";tab="e";draw();scrollTo(0,0)};
+  const startEdit=r=>{editing=r[0];ename=r[1]||"";es=new Set(parseL(r[2]));en=r[3];et=r[4];em=r[5]==="p"?"p":"x";eu=Number(r[6])>1;eshow=r[8]!=="Ẩn";eclose=r[11]>0?toLocal(r[11]):"";elk=new Set(Number(r[12])===1?parseL(r[2]):[]);tab="e";draw();scrollTo(0,0)};
   const stt=async(c,s,cl)=>{const r=data.exams.find(x=>x[0]===c);if(!r)return;const o=[r[8],r[11]];r[8]=s;if(cl)r[11]=0;draw();
    try{const d=await jsonp({pin,action:"examstatus",code:c,st:s,clearclose:cl?1:0});if(!d.ok)throw 0}catch(e){r[8]=o[0];r[11]=o[1];note="Không cập nhật được, hãy thử lại.";draw()}};
   const del=async c=>{const i=data.exams.findIndex(x=>x[0]===c);if(i<0)return;const r=data.exams.splice(i,1)[0];draw();
@@ -408,24 +407,22 @@ function teacher(){
    h("div",{style:"word-break:break-all;margin:6px 0"},ok2.link),(()=>{const b=h("button",{class:"bb blue"},"🔗 Sao chép link");b.onclick=()=>cp(ok2.link,b);return b})()):null;
   const fa=h("input",{type:"number",min:1,max:25,placeholder:"13",style:"width:72px"}),fb=h("input",{type:"number",min:1,max:25,placeholder:"25",style:"width:72px"});
   const rngRow=h("div",{class:"seg",style:"justify-content:center;align-items:center;margin-top:8px"},h("span",{class:"mute"},"Từ bài"),fa,h("span",{class:"mute"},"đến bài"),fb,h("button",{onclick:()=>{const a=Math.max(1,+fa.value||1),b=Math.min(25,+fb.value||a);rg(Math.min(a,b),Math.max(a,b))()}},"Chọn khoảng"));
-  const regSave=async()=>{const val=fmtL([...elk].sort((a,b)=>a-b));data.locked=val;note="Đang đồng bộ khóa…";draw();
-   try{const d=await jsonp({pin,action:"setlocks",locked:val});if(!d.ok)throw 0;note="Đã lưu và đồng bộ khóa ✓ (giao diện làm bài tự cập nhật trong khoảng 30–45 giây)";draw()}
-   catch(e){note="Không đồng bộ được khóa, hãy thử lại.";draw()}};
-  const lck=(c,v)=>{const r=data.exams.find(x=>x[0]===c);if(!r)return;parseL(r[2]).forEach(x=>{v?elk.add(x):elk.delete(x)});regSave()};
-  const isLk=s=>parseL(s).some(x=>elk.has(x));
-  const lkNote=h("div",{class:"mute",style:"font-size:.8rem;text-align:center;margin-top:6px"},"Khóa được cài theo bài: tự lưu và áp dụng cho mọi đề có chứa bài đó trên giao diện làm bài. Nếu máy này từng nhập số điện thoại để thử thì sẽ không thấy ổ khóa; bấm “Đặt lại mở khóa trên máy này” hoặc xem bằng cửa sổ ẩn danh.");
-  const lkRow=h("div",{class:"seg",style:"justify-content:center;margin-top:8px"},h("button",{class:"bb amber",onclick:()=>{if(!es.size){msg2.textContent="Hãy chọn bài cần khóa.";return}es.forEach(x=>elk.add(x));regSave()}},"🔒 Khóa các bài đã chọn"),h("button",{class:"bb green",onclick:()=>{if(!es.size){msg2.textContent="Hãy chọn bài cần mở khóa.";return}es.forEach(x=>elk.delete(x));regSave()}},"🔓 Bỏ khóa các bài đã chọn"),h("button",{class:"bb teal",onclick:regSave},"💾 Lưu và đồng bộ khóa"),h("button",{class:"bb gray",onclick:()=>{try{localStorage.removeItem("minna_unlock");localStorage.removeItem("minna_phone")}catch(e){}msg2.textContent="Đã đặt lại: máy này sẽ thấy ổ khóa như học viên mới, hãy mở lại trang chủ."}},"🔄 Đặt lại mở khóa trên máy này"));
+  const lck=async(c,v)=>{const r=data.exams.find(x=>x[0]===c);if(!r)return;const o=r[12];r[12]=v;note="Đang lưu…";draw();
+   try{const d=await jsonp({pin,action:"examlock",code:c,lock:v});if(!d.ok)throw 0;note=(v?"Đã khóa đề ":"Đã mở khóa đề ")+c+" ✓ (chỉ đề này thay đổi)";draw()}
+   catch(e){r[12]=o;note="Không cập nhật được, hãy thử lại.";draw()}};
+  const lkNote=h("div",{class:"mute",style:"font-size:.8rem;text-align:center;margin-top:6px"},"Dấu 🔒 ở lưới chỉ áp dụng cho đề sắp tạo (một đề, hoặc mỗi bài một đề). Với đề đã tạo, khóa hoặc mở khóa từng đề bằng nút ở bảng “Đề đã tạo”. Nếu máy này từng nhập số điện thoại để thử thì sẽ không thấy ổ khóa: bấm “Đặt lại mở khóa trên máy này” hoặc xem bằng cửa sổ ẩn danh.");
+  const lkRow=h("div",{class:"seg",style:"justify-content:center;margin-top:8px"},h("button",{class:"bb amber",onclick:()=>{if(!es.size){msg2.textContent="Hãy chọn bài cần khóa.";return}es.forEach(x=>elk.add(x));g.paint();upd()}},"🔒 Khóa các bài đã chọn"),h("button",{class:"bb green",onclick:()=>{if(!es.size){msg2.textContent="Hãy chọn bài cần mở khóa.";return}es.forEach(x=>elk.delete(x));g.paint();upd()}},"🔓 Bỏ khóa các bài đã chọn"),h("button",{class:"bb gray",onclick:()=>{try{localStorage.removeItem("minna_unlock");localStorage.removeItem("minna_phone")}catch(e){}msg2.textContent="Đã đặt lại: máy này sẽ thấy ổ khóa như học viên mới, hãy mở lại trang chủ."}},"🔄 Đặt lại mở khóa trên máy này"));
   const bulk=h("button",{},"⚡ Tạo mỗi bài một đề");let barm=false;
   bulk.onclick=async()=>{const c=cfg();if(!need(c))return;
    if(!barm){barm=true;bulk.textContent="Tạo "+c.ls.length+" đề? Bấm lần nữa";setTimeout(()=>{barm=false;bulk.textContent="⚡ Tạo mỗi bài một đề"},3500);return}
    barm=false;bulk.disabled=true;bulk.textContent="Đang tạo…";
-   try{const d=await jsonp({pin,action:"bulkexams",ls:fmtL(c.ls),n:c.n,t:c.t,mode:c.mode,k:eu?5:1,hide:eshow?0:1});if(!d.ok)throw 0;
+   try{const d=await jsonp({pin,action:"bulkexams",ls:fmtL(c.ls),n:c.n,t:c.t,mode:c.mode,k:eu?5:1,hide:eshow?0:1,locks:fmtL([...elk].sort((a,b)=>a-b))});if(!d.ok)throw 0;
     note="Đã tạo "+d.made+" đề"+(d.skipped?", bỏ qua "+d.skipped+" bài đã có đề":"")+".";await load()}
    catch(e){note="Không tạo được, hãy thử lại.";draw()}};
   upd();
   const eff=r=>r[8]==="Đóng"?"Đóng":(r[11]>0&&Date.now()>r[11]?"Hết giờ":r[8]),LB={"Mở":"Mở · hiện trên trang chủ","Ẩn":"Mở · ẩn khỏi trang chủ","Đóng":"Đã đóng","Hết giờ":"Đã tự đóng (hết giờ)"};
   const rows=data.exams.slice().reverse();
-  const rowEl=r=>{const s=eff(r),c=r[0],lk=isLk(r[2]);
+  const rowEl=r=>{const s=eff(r),c=r[0],lk=Number(r[12])===1;
    const ti=h("input",{type:"text",value:r[1]||"",placeholder:lessonLabel(r[2]),style:"min-width:150px;max-width:250px"}),sv=h("button",{class:"bb gray",disabled:true},"💾 Lưu");
    ti.oninput=()=>{sv.className="bb green";sv.disabled=false};
    sv.onclick=async()=>{const nv=ti.value.trim()||lessonLabel(r[2]),o=r[1];r[1]=nv;sv.disabled=true;sv.textContent="Đang lưu…";
