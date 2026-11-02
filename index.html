@@ -59,6 +59,7 @@ textarea{width:100%;min-height:90px;border:1px solid var(--line);border-radius:1
 .tile.lock{background:var(--lkbg);border-color:var(--lkb);color:var(--lkf)}.tile.lock:hover{background:var(--lkbg)}.tile .lkt{font-size:.66rem;font-weight:700}
 .lt.lkm{border-color:var(--lkb);box-shadow:inset 0 0 0 1px var(--lkb)}.bb.purple{background:#7c3aed}
 .lt.lk{background:var(--lkbg);border-color:var(--lkb);color:var(--lkf)}.lt.lk small{color:inherit}
+.fbk{border:0;background:none;color:var(--mute);font-size:.78rem;padding:2px 6px;white-space:nowrap}.fbk:hover{color:var(--bad)}.mdl select,.mdl textarea{width:100%}
 .mdl{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}.mdl .card{max-width:430px;width:100%;margin:0;border-top:3px solid var(--gold)}
 .cta{width:100%;padding:14px;margin-top:16px;font-size:1.05rem;font-weight:800;letter-spacing:.03em;color:var(--bad);background:var(--card);border:2px solid var(--bad);border-radius:12px}.cta:hover{background:var(--badbg)}.cta.solid{background:#c62828;color:#fff;border-color:#c62828}.cta.solid:hover{background:#c62828;filter:brightness(1.1)}
 .bb{color:#fff;border:0;font-weight:600;padding:4px 9px;border-radius:7px;font-size:.74rem}.bb:hover{filter:brightness(1.12)}.bb.blue{background:#1a73e8}.bb.amber{background:#d97706}.bb.red{background:#c62828}.bb.green{background:#2e7d32}.bb.teal{background:#00897b}.bb.gray{background:#6b7280}
@@ -104,6 +105,24 @@ function hb(st){if(!ENDPOINT||!S||S.fin||S.cfg.mode!=="x")return;post({type:"hb"
 function jsonp(p){return new Promise((res,rej)=>{const cb="cb"+Date.now()+Math.floor(Math.random()*1e4),s=document.createElement("script"),tm=setTimeout(()=>{cl();rej(new Error("timeout"))},20000);function cl(){clearTimeout(tm);delete window[cb];s.remove()}window[cb]=d=>{cl();res(d)};s.onerror=()=>{cl();rej(new Error("net"))};s.src=ENDPOINT+"?"+new URLSearchParams(Object.assign({callback:cb},p));document.head.append(s)})}
 const AL="ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 function genCode(){let s="";for(let i=0;i<5;i++)s+=AL[Math.floor(Math.random()*AL.length)];return s}
+function openFb(it){
+ const q=it&&it.q,ins=q?(INS[q[1]]||[]):[];
+ const cat=h("select",{style:"padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit"},["Câu hỏi hoặc đáp án chưa đúng","Nội dung chưa rõ, khó hiểu","Lỗi hiển thị","Góp ý thêm nội dung học tập","Ý kiến khác"].map(x=>h("option",{value:x},x)));
+ const msg=h("textarea",{maxlength:600,placeholder:"Mô tả góp ý của bạn…",style:"min-height:100px"}),er=h("div",{class:"warn hide"}),ok=h("button",{class:"cta solid",style:"margin-top:12px"},"Gửi góp ý"),m=h("div",{class:"mdl"});
+ const card=h("div",{class:"card"});
+ ok.onclick=async()=>{er.classList.add("hide");
+  if(msg.value.trim().length<3){er.textContent="Hãy nhập nội dung góp ý.";er.classList.remove("hide");return}
+  if(!ENDPOINT){er.textContent="Hệ thống chưa sẵn sàng.";er.classList.remove("hide");return}
+  ok.disabled=true;ok.textContent="Đang gửi…";
+  const idx=S&&q?S.items.indexOf(it):-1,correct=q?(it.o.find(o=>o[1])||[""])[0]:"",pick=idx>=0&&S.ans[idx]>=0?it.o[S.ans[idx]][0]:"";
+  try{await post({type:"fb",sid:S&&S.sid||"",name:S&&S.name||"",cls:S&&S.cls||"",exam:S&&S.cfg&&S.cfg.ec||"",lesson:q?q[0]:"",qtype:ins[1]||"",q:q?String(q[2]).replace(/\n/g," / ").slice(0,500):"",ok:String(correct).slice(0,180),pick:String(pick).slice(0,180),cat:cat.value,msg:msg.value.trim()});
+   card.replaceChildren(h("h2",{style:"margin-top:0;text-align:center"},"Cảm ơn bạn đã góp ý ✓"),h("p",{class:"mute",style:"text-align:center"},"Góp ý của bạn đã được gửi để trung tâm xem xét và điều chỉnh nội dung."));setTimeout(()=>m.remove(),1800)}
+  catch(e){ok.disabled=false;ok.textContent="Gửi góp ý";er.textContent="Chưa gửi được, hãy kiểm tra mạng và thử lại.";er.classList.remove("hide")}};
+ m.onclick=e=>{if(e.target===m)m.remove()};
+ card.append(h("h2",{style:"margin-top:0"},"⚑ Góp ý nội dung"),
+  q?h("p",{class:"mute",style:"font-size:.85rem"},"Về câu: ",String(q[2]).replace(/\n/g," / ").slice(0,90)+(String(q[2]).length>90?"…":"")):h("p",{class:"mute"},"Góp ý chung về bài học hoặc trang web."),
+  h("label",{},"Loại góp ý"),cat,h("label",{},"Nội dung góp ý"),msg,er,ok,h("div",{style:"text-align:center;margin-top:8px"},h("button",{style:"border:0;background:none;color:var(--mute)",onclick:()=>m.remove()},"Đóng")));
+ m.append(card);document.body.append(m);msg.focus()}
 function normPhone(v){let s=String(v||"").replace(/[\s.\-()]/g,"");if(/^\+?84/.test(s))s="0"+s.replace(/^\+?84/,"");return /^0[35789]\d{8}$/.test(s)?s:""}
 function lessonLabel(s){return "Bài "+String(s).replace(/-/g,"–").replace(/~/g,", ")}
 function genSeeds(k){const s=new Set();while(s.size<k)s.add(100+Math.floor(Math.random()*900));return[...s].join("_")}
@@ -125,37 +144,38 @@ function setup(){
  clearInterval(tick);app.style.maxWidth="";app.style.padding="";document.body.classList.remove("inq");
  const fx=fromHash(),sv=LS.get(),hc=(location.hash.slice(1).match(/^de-([A-Za-z0-9]{3,10})$/i)||[])[1];
  let sel=hc?hc.toUpperCase():"",items=null,hinfo=null;
- const name=h("input",{type:"text",placeholder:"Nguyễn Văn A",value:(sv&&sv.name)||""}),cls=h("input",{type:"text",placeholder:"Lớp / Mã TTS",value:(sv&&sv.cls)||""}),
+ const name=h("input",{type:"text",placeholder:"Nguyễn Văn A",value:(sv&&sv.name)||""}),cls=h("input",{type:"text",placeholder:"Lớp / Mã HV",value:(sv&&sv.cls)||""}),
   lst=h("div"),err=h("div",{class:"warn hide"}),goBtn=h("button",{class:"cta"},"Bắt đầu làm bài  →");
  const showErr=m=>{err.textContent=m;err.classList.remove("hide")},reset=()=>{goBtn.disabled=false;goBtn.textContent="Bắt đầu làm bài  →"};
+ const needInfo=()=>{if(!name.value.trim()){showErr("Vui lòng nhập Họ và tên trước khi mở khóa.");name.focus();return true}if(!cls.value.trim()){showErr("Vui lòng nhập Lớp / Mã HV trước khi mở khóa.");cls.focus();return true}err.classList.add("hide");return false};
  const isUnl=()=>{try{return localStorage.getItem("minna_unlock")==="1"}catch(e){return false}};
  const gated=lf=>!hc&&!fx&&!isUnl()&&Number(lf)===1;
  function openUnlock(done,label){
   const ph=h("input",{type:"tel",inputmode:"tel",autocomplete:"tel",placeholder:"Nhập số điện thoại của bạn"}),cb=h("input",{type:"checkbox"}),er=h("div",{class:"warn hide"}),
-   ok=h("button",{class:"cta solid",style:"margin-top:14px"},"Xác nhận và Mở khóa"),m=h("div",{class:"mdl"});
+   ok=h("button",{class:"cta solid",style:"margin-top:14px"},"XÁC NHẬN VÀ MỞ KHÓA"),m=h("div",{class:"mdl"});
   const bad=s=>{er.textContent=s;er.classList.remove("hide")};
   ok.onclick=async()=>{er.classList.add("hide");const p=normPhone(ph.value);
    if(!p){bad("Số điện thoại chưa đúng. Hãy nhập số di động Việt Nam gồm 10 chữ số.");return}
    ok.disabled=true;ok.textContent="Đang mở khóa…";
    try{const d=await jsonp({action:"unlock",phone:p,name:name.value.trim(),cls:cls.value.trim(),src:label||"",consent:cb.checked?1:0});if(!d.ok)throw 0;
     try{localStorage.setItem("minna_unlock","1");localStorage.setItem("minna_phone",p)}catch(e){}m.remove();if(done)done()}
-   catch(e){ok.disabled=false;ok.textContent="Xác nhận và Mở khóa";bad("Chưa gửi được, hãy kiểm tra mạng và thử lại.")}};
+   catch(e){ok.disabled=false;ok.textContent="XÁC NHẬN VÀ MỞ KHÓA";bad("Chưa gửi được, hãy kiểm tra mạng và thử lại.")}};
   m.onclick=e=>{if(e.target===m)m.remove()};
-  m.append(h("div",{class:"card"},h("h2",{style:"margin-top:0"},"🔒 Mở khóa bài luyện tập"),
+  m.append(h("div",{class:"card"},h("h2",{style:"margin-top:0"},"🔒 MỞ KHÓA BÀI LUYỆN TẬP"),
    h("p",{class:"mute"},"Các bài luyện tập có biểu tượng khóa yêu cầu xác thực số điện thoại. Bạn chỉ cần nhập số điện thoại một lần để mở khóa và truy cập tất cả bài luyện tập trên thiết bị này."),
    h("label",{},"Số điện thoại"),ph,
-   h("p",{class:"mute",style:"font-size:.8rem;margin:6px 0 10px"},"Thông tin được sử dụng để xác thực quyền truy cập và hỗ trợ tư vấn khi bạn có nhu cầu."),
+   h("p",{class:"mute",style:"font-size:.8rem;margin:6px 0 10px"},"Thông tin được sử dụng để xác thực quyền truy cập bài luyện tập."),
    h("label",{style:"font-weight:400;font-size:.88rem;display:flex;gap:8px;align-items:flex-start"},cb,h("span",{},"Tôi muốn nhận thêm thông tin và được tư vấn về các chương trình học tập, đào tạo và cơ hội tại Nhật Bản.")),
    er,ok,h("div",{style:"text-align:center;margin-top:8px"},h("button",{style:"border:0;background:none;color:var(--mute)",onclick:()=>m.remove()},"Để sau"))));
   document.body.append(m);ph.focus()}
- const tileEl=(c,ls,t,lf)=>{const lk=gated(lf);return h("button",{class:"tile"+(sel===c?" on":"")+(lk?" lock":""),onclick:()=>{if(lk){openUnlock(()=>{sel=c;paintList()},lessonLabel(ls));return}sel=c;paintList()}},
-   h("b",{},lessonLabel(ls)),h("small",{},"⏱ "+(t?t+" phút":"Không giới hạn giờ")),lk?h("small",{class:"lkt"},"🔒 Cần mở khóa"):null)};
+ const tileEl=(c,ls,t,lf,nm)=>{const lk=gated(lf),ttl=String(nm||"").trim()||lessonLabel(ls);return h("button",{class:"tile"+(sel===c?" on":"")+(lk?" lock":""),onclick:()=>{if(lk){if(needInfo())return;openUnlock(()=>{sel=c;paintList()},ttl);return}sel=c;paintList()}},
+   h("b",{},ttl),h("small",{},"⏱ "+(t?t+" phút":"Không giới hạn giờ")),lk?h("small",{class:"lkt"},"🔒 Cần mở khóa"):null)};
  function paintList(){
   if(hc){lst.replaceChildren(hinfo?h("div",{class:"tiles"},tileEl(sel,hinfo.ls,hinfo.t,0)):h("div",{class:"mute"},hinfo===false?"Bài trong đường link không đúng hoặc đã đóng.":"Đang tải bài…"));return}
   if(items===null){lst.replaceChildren(h("div",{class:"mute"},"Đang tải danh sách bài…"));return}
   if(!items.length){lst.replaceChildren(h("div",{class:"mute"},"Hiện chưa có bài nào đang mở. Vui lòng chờ giáo viên mở bài."));return}
   const any=items.some(r=>gated(r[3]));
-  lst.replaceChildren(h("div",{class:"tiles"},items.map(r=>tileEl(String(r[0]).toUpperCase(),r[1],r[2],r[3]))),any?h("div",{class:"mute",style:"font-size:.8rem"},"🔒 Bài có ổ khóa: để lại số điện thoại một lần để mở khóa."):null)}
+  lst.replaceChildren(h("div",{class:"tiles"},items.map(r=>tileEl(String(r[0]).toUpperCase(),r[1],r[2],r[3],r[4]))),any?h("div",{class:"mute",style:"font-size:.8rem"},"🔒 Bài có ổ khóa: để lại số điện thoại một lần để mở khóa."):null)}
  async function loadList(){items=null;paintList();try{const d=await jsonp({action:"exams"});items=d.ok&&d.exams?d.exams:[]}catch(e){items=[]}paintList()}
  async function loadOne(){hinfo=null;paintList();try{const d=await jsonp({action:"exam",code:hc.toUpperCase()});hinfo=d.ok?{ls:d.cfg.ls,t:d.cfg.t}:false}catch(e){hinfo=false}paintList()}
  async function go(){
@@ -167,7 +187,7 @@ function setup(){
    if(!sel){showErr("Hãy chọn một bài.");return}
    if(!ENDPOINT){showErr("Hệ thống chưa sẵn sàng. Hãy liên hệ giáo viên.");return}
    const cur=items&&items.find(r=>String(r[0]).toUpperCase()===sel);
-   if(cur&&gated(cur[3])){openUnlock(()=>{paintList();go()},lessonLabel(cur[1]));return}
+   if(cur&&gated(cur[3])){if(needInfo())return;openUnlock(()=>{paintList();go()},String(cur[4]||"").trim()||lessonLabel(cur[1]));return}
    if(isUnl()){let ph="";try{ph=localStorage.getItem("minna_phone")||""}catch(e){}if(ph)jsonp({action:"unlock",phone:ph,name:nm,cls:cls.value.trim(),quiet:1}).catch(()=>{})}
    goBtn.disabled=true;goBtn.textContent="Đang chuẩn bị đề…";
    try{const d=await jsonp({action:"join",code:sel});reset();
@@ -188,7 +208,7 @@ function setup(){
   h("div",{style:"text-align:right"},tbtn),
   h("div",{class:"card hero"},
    h("div",{class:"step"},h("i",{},"1"),"Thông tin học viên"),
-   h("div",{class:"row"},h("div",{},h("label",{},"Họ và tên"),name),h("div",{},h("label",{},"Lớp / Mã TTS"),cls)),
+   h("div",{class:"row"},h("div",{},h("label",{},"Họ và tên"),name),h("div",{},h("label",{},"Lớp / Mã HV"),cls)),
    h("div",{class:"step",style:"margin-top:22px"},h("i",{},"2"),"Chọn bài"),
    pick,err,goBtn),
   h("p",{class:"mute",style:"text-align:center;font-size:.82rem"},ENDPOINT?"Kết quả được gửi tự động cho giáo viên khi nộp bài. Việc rời khỏi trang trong lúc làm bài sẽ được ghi lại.":"Kết quả hiển thị ngay sau khi nộp bài."));
@@ -218,7 +238,7 @@ function quiz(){
   const opts=it.o.map((o,k)=>h("button",{class:"opt"+(S.ans[S.i]===k?" sel":"")+(pr?(o[1]?" ok":S.ans[S.i]===k?" no":""):""),disabled:pr,onclick:()=>pick(k)},h("i",{},"ABCD"[k]+"."),o[0]));
   const done=S.ans.filter(a=>a>=0).length;
   body.replaceChildren(h("div",{class:"mute"},"Câu "+(S.i+1)+"/"+N+" · đã làm "+done),
-   h("div",{class:"card"},h("div",{class:"hint"},ins[2]||""),stem,opts),
+   h("div",{class:"card"},h("div",{style:"display:flex;justify-content:space-between;gap:8px;align-items:flex-start"},h("div",{class:"hint"},ins[2]||""),h("button",{class:"fbk",onclick:()=>openFb(it)},"⚑ Góp ý")),stem,opts),
    h("div",{class:"nav"},h("button",{disabled:S.i===0,onclick:()=>go(S.i-1)},"← Trước"),h("button",{disabled:S.i===N-1,onclick:()=>go(S.i+1)},"Sau →")),
    h("div",{class:"grid"},S.items.map((_,k)=>h("button",{class:(S.ans[k]>=0?"dn ":"")+(k===S.i?"cur":""),onclick:()=>go(k)},k+1))))}
  function go(k){S.i=k;save();draw();scrollTo(0,0)}
@@ -245,17 +265,17 @@ function result(){
  let wrongOnly=false;const list=h("div");
  function paint(){list.replaceChildren(...S.items.map((it,k)=>{const a=S.ans[k],good=a>=0&&it.o[a][1];if(wrongOnly&&good)return null;const q=it.q,ins=INS[q[1]]||[];
   return h("div",{class:"card rv "+(good?"ok":"no")},h("div",{class:"hint"},"Câu "+(k+1)+" · bài "+q[0]+" · "+(ins[1]||"")+" · "+(a<0?"chưa trả lời":good?"đúng":"sai")),
-   h("div",{class:"hint"},ins[2]||""),h("div",{class:"stem"},(q[2]?q[2].split("\n"):[]).map(l=>h("div",{},l))),
+   h("div",{style:"display:flex;justify-content:space-between;gap:8px"},h("div",{class:"hint"},ins[2]||""),h("button",{class:"fbk",onclick:()=>openFb(it)},"⚑ Góp ý câu này")),h("div",{class:"stem"},(q[2]?q[2].split("\n"):[]).map(l=>h("div",{},l))),
    it.o.map((o,j)=>h("div",{class:"opt "+(o[1]?"ok":a===j?"no":"")},h("i",{},"ABCD"[j]+"."),o[0]+(a===j?"   ← bạn chọn":""))))}))}
  const f=h("button",{onclick:()=>{wrongOnly=!wrongOnly;f.textContent=wrongOnly?"Xem tất cả câu":"Chỉ xem câu sai";paint()}},"Chỉ xem câu sai");
  app.replaceChildren(h("h1",{},"Kết quả"),h("div",{class:"card"},h("div",{class:"score"},pts+"/10"),h("p",{},ok+"/"+N+" câu đúng · thời gian "+fmt(secs)+(S.name?" · "+S.name:"")),ta,h("p"),cp,stat),
-  h("div",{class:"seg"},f,(S.trial||S.cfg.mode==="p")?h("button",{onclick:()=>{S.cfg.m=Math.floor(Math.random()*900)+100;S.items=build(S.cfg);S.ans=Array(S.items.length).fill(-1);S.i=0;S.start=Date.now();S.done=false;S.lv=0;S.lt=0;S.sid=newSid();S.fin=false;save();quiz()}},"Làm đề mới"):null,h("button",{onclick:()=>{const tr=S.trial;S=null;tr?teacher():setup()}},"Về trang đầu")),
+  h("div",{class:"seg"},f,h("button",{onclick:()=>openFb(null)},"💬 Góp ý chung"),(S.trial||S.cfg.mode==="p")?h("button",{onclick:()=>{S.cfg.m=Math.floor(Math.random()*900)+100;S.items=build(S.cfg);S.ans=Array(S.items.length).fill(-1);S.i=0;S.start=Date.now();S.done=false;S.lv=0;S.lt=0;S.sid=newSid();S.fin=false;save();quiz()}},"Làm đề mới"):null,h("button",{onclick:()=>{const tr=S.trial;S=null;tr?teacher():setup()}},"Về trang đầu")),
   h("h2",{},"Xem lại bài làm"),list);paint();scrollTo(0,0);send();
 }
 function teacher(){
  clearInterval(tick);document.body.classList.remove("inq");app.style.maxWidth="1100px";app.style.padding="";
- let pin="",tab="m",data=null,timer=null,fc="",q="",es=new Set([1]),en=20,et=20,em="x",eu=false,ename="",eshow=true,ok2=null,eclose="",editing=null,note="",elk=new Set(),elkInit=false,contacts=null,cq="",conly=false,redit=null;
- const deriveElk=()=>new Set(((data&&data.exams)||[]).filter(r=>Number(r[12])===1).flatMap(r=>parseL(r[2])));
+ let pin="",tab="m",data=null,timer=null,fc="",q="",es=new Set([1]),en=20,et=20,em="x",eu=false,ename="",eshow=true,ok2=null,eclose="",editing=null,note="",elk=new Set(),elkInit=false,contacts=null,cq="",conly=false,redit=null,feedbacks=null,fbs="Mới",fbq="";
+ const deriveElk=()=>new Set(parseL((data&&data.locked)||""));
  try{pin=sessionStorage.getItem("minna_pin")||""}catch(e){}
  const pi=h("input",{type:"password",placeholder:"Mã PIN giáo viên",value:pin,style:"max-width:240px"}),msg=h("div",{class:"mute"}),vw=h("div",{class:"warn hide"}),box=h("div");
  const stop=()=>clearInterval(timer);
@@ -264,11 +284,30 @@ function teacher(){
   msg.textContent="Đang tải dữ liệu…";
   try{const d=await jsonp({pin});
    if(!d.ok){data=null;stop();box.replaceChildren();msg.textContent=d.err==="pin"?"Sai mã PIN.":"Lỗi: "+d.err;return}
-   data=d;vw.textContent="⚠ Mã Apps Script trên Google chưa phải bản mới nhất nên một số chức năng (khóa bài, sửa/xóa kết quả, lưu…) có thể chưa hoạt động. Hãy dán lại mã Apps Script mới và triển khai Phiên bản mới.";vw.classList.toggle("hide",d.ver>=8);msg.textContent="Cập nhật lúc "+new Date().toLocaleTimeString("vi-VN");try{sessionStorage.setItem("minna_pin",pin)}catch(e){}
-   stop();timer=setInterval(()=>{const a=document.activeElement;if(!document.hidden&&(tab==="m"||tab==="r")&&!redit&&!(a&&a.tagName==="INPUT"&&box.contains(a)))load()},10000);draw()}
+   data=d;vw.textContent="⚠ Mã Apps Script trên Google chưa phải bản mới nhất nên một số chức năng (khóa bài, sửa/xóa kết quả, lưu…) có thể chưa hoạt động. Hãy dán lại mã Apps Script mới và triển khai Phiên bản mới.";vw.classList.toggle("hide",d.ver>=9);msg.textContent="Cập nhật lúc "+new Date().toLocaleTimeString("vi-VN");try{sessionStorage.setItem("minna_pin",pin)}catch(e){}
+   if(feedbacks===null&&d.ver>=9)loadFb();stop();timer=setInterval(()=>{const a=document.activeElement;if(!document.hidden&&(tab==="m"||tab==="r")&&!redit&&!(a&&a.tagName==="INPUT"&&box.contains(a)))load()},10000);draw()}
   catch(e){msg.textContent="Không tải được dữ liệu. Kiểm tra mạng và cách triển khai Apps Script."}
  }
  const sel=(vals,cur,on)=>{const s=h("select",{onchange:e=>on(e.target.value),style:"padding:8px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit"},h("option",{value:""},"Tất cả mã đề"),vals.map(v=>h("option",{value:v,selected:String(v)===String(cur)},"Mã đề "+v)));return s};
+ const fbN=()=>{const n=(feedbacks||[]).filter(r=>r[12]==="Mới").length;return n?" ("+n+")":""};
+ async function loadFb(){try{const d=await jsonp({pin,action:"feedbacks"});feedbacks=d.ok?d.rows:[]}catch(e){feedbacks=[]}draw()}
+ function fv(){
+  const rows=(feedbacks||[]).filter(r=>(fbs===""||r[12]===fbs)&&(!fbq||r.join(" ").toLowerCase().includes(fbq.toLowerCase()))).slice().sort((a,b)=>b[1]-a[1]);
+  const setSt=async(r,s)=>{const o=r[12];r[12]=s;draw();try{const d=await jsonp({pin,action:"fbstatus",id:r[0],st:s});if(!d.ok)throw 0}catch(e){r[12]=o;draw()}};
+  const delF=async r=>{const i=feedbacks.indexOf(r);if(i<0)return;feedbacks.splice(i,1);draw();try{const d=await jsonp({pin,action:"fbdelete",id:r[0]});if(!d.ok)throw 0}catch(e){feedbacks.splice(i,0,r);draw()}};
+  const dBtn=r=>{const b=h("button",{class:"bb gray"},"🗑 Xóa");let armed=false;b.onclick=()=>{if(!armed){armed=true;b.textContent="Bấm lần nữa để xóa";b.className="bb red";setTimeout(()=>{armed=false;b.textContent="🗑 Xóa";b.className="bb gray"},3000)}else delF(r)};return b};
+  const csv=()=>{const e=v=>'"'+String(v).replace(/"/g,'""')+'"',L=[["Thời gian","Họ tên","Lớp","Đề thi","Bài","Dạng câu","Câu hỏi","Đáp án đúng","Học viên chọn","Loại góp ý","Nội dung góp ý","Trạng thái"]].concat(rows.map(r=>[new Date(r[1]).toLocaleString("vi-VN"),r[2],r[3],r[4],r[5],r[6],r[7],r[8],r[9],r[10],r[11],r[12]]));
+   const a=h("a",{href:URL.createObjectURL(new Blob(["\ufeff"+L.map(r=>r.map(e).join(",")).join("\n")],{type:"text/csv"})),download:"gop-y.csv"});document.body.append(a);a.click();a.remove()};
+  const sf=h("select",{onchange:e=>{fbs=e.target.value;draw()},style:"padding:8px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit"},[["Mới","Chưa xử lý"],["Đã xử lý","Đã xử lý"],["","Tất cả"]].map(([v,l])=>h("option",{value:v,selected:fbs===v},l)));
+  const qi=h("input",{type:"text",placeholder:"Tìm trong góp ý",value:fbq,style:"max-width:220px",oninput:e=>{fbq=e.target.value;clearTimeout(fv.t);fv.t=setTimeout(()=>{draw();const i=box.querySelector("input[type=text]");if(i){i.focus();i.setSelectionRange(fbq.length,fbq.length)}},400)}});
+  return[h("div",{class:"card"},h("h2",{style:"margin-top:0"},"Góp ý của học viên"+(feedbacks?" ("+feedbacks.length+")":"")),
+   feedbacks===null?h("p",{class:"mute"},"Đang tải…"):[h("div",{class:"row",style:"align-items:center;margin:8px 0"},h("div",{},sf),h("div",{},qi),h("button",{class:"bb green",onclick:csv},"⬇ Tải CSV")),
+    rows.length?h("div",{class:"sc"},h("table",{class:"tbl"},h("tr",{},["Thời gian","Người gửi","Bài","Loại góp ý","Câu hỏi","Nội dung góp ý","Trạng thái","Thao tác"].map(x=>h("th",{},x))),
+     rows.map(r=>h("tr",{},h("td",{},fT(r[1])),h("td",{},r[2],h("small",{},r[3])),h("td",{},r[5]!==""?"Bài "+r[5]:"-"),h("td",{style:"white-space:normal"},r[10]),
+      h("td",{style:"white-space:normal;max-width:260px"},r[7]?h("details",{},h("summary",{},String(r[7]).slice(0,60)+(String(r[7]).length>60?"…":"")),h("div",{},r[7]),h("small",{},"Đáp án đúng: "+(r[8]||"-")),h("small",{},"Học viên chọn: "+(r[9]||"-"))):"(góp ý chung)"),
+      h("td",{style:"white-space:normal;max-width:300px"},r[11]),h("td",{class:r[12]==="Mới"?"red":""},r[12]),
+      h("td",{},h("div",{class:"acts"},r[12]==="Mới"?h("button",{class:"bb green",onclick:()=>setSt(r,"Đã xử lý")},"✔ Đã xử lý"):h("button",{class:"bb blue",onclick:()=>setSt(r,"Mới")},"↩ Mở lại"),dBtn(r))))))):h("p",{class:"mute"},"Chưa có góp ý nào.")])]
+ }
  async function loadContacts(){
   try{const d=await jsonp({pin,action:"contacts"});contacts=d.ok?d.rows:[]}catch(e){contacts=[]}
   if(tab==="k")draw()}
@@ -323,12 +362,12 @@ function teacher(){
   const sum=h("div",{class:"mute",style:"text-align:center"}),msg2=h("div",{class:"mute",style:"margin-top:8px"},note);note="";
   if(!data.exams)data.exams=[];
   if(!elkInit){elk=deriveElk();elkInit=true}
-  const mlk=()=>[...es].filter(x=>elk.has(x)).sort((a,b)=>a-b),lockOf=()=>mlk().length>0;
-  const upd=()=>{const n=[...es].reduce((s,b)=>s+(cntL[b]||0),0);sum.textContent=es.size?"Đã chọn "+es.size+" bài · khoảng "+n+" câu · "+(lockOf()?"🔒 Khóa: Bài "+rangeTxt(mlk()):"🔓 Miễn phí"):"Chưa chọn bài nào"};
+  const mlk=()=>[...es].filter(x=>elk.has(x)).sort((a,b)=>a-b);
+  const upd=()=>{const n=[...es].reduce((s,b)=>s+(cntL[b]||0),0);sum.textContent=es.size?"Đã chọn "+es.size+" bài · khoảng "+n+" câu · "+(mlk().length?"🔒 Khóa: Bài "+rangeTxt(mlk()):"🔓 Miễn phí"):"Chưa chọn bài nào"};
   const g=lessonGrid(es,upd,elk),rg=(a,b)=>()=>{es.clear();for(let i=a;i<=b;i++)es.add(i);g.paint();upd()};
   const quick=h("div",{class:"seg",style:"justify-content:center"},h("button",{onclick:rg(1,25)},"Tất cả"),h("button",{onclick:()=>{es.clear();g.paint();upd()}},"Bỏ chọn"),[[1,5],[6,10],[11,15],[16,20],[21,25]].map(([a,b])=>h("button",{onclick:rg(a,b)},"Bài "+a+"–"+b)));
   const nI=h("input",{type:"number",min:5,max:100,value:en,oninput:e=>{en=e.target.value}}),tI=h("input",{type:"number",min:0,max:180,value:et,oninput:e=>{et=e.target.value}}),
-   nm=h("input",{type:"text",placeholder:"VD: Kiểm tra bài 1–5 – Lớp TTS1 (chỉ giáo viên nhìn thấy)",value:ename,oninput:e=>{ename=e.target.value}});
+   nm=h("input",{type:"text",placeholder:"Để trống: tự đặt theo bài, ví dụ “Bài 1–5”. Tên này học viên nhìn thấy.",value:ename,oninput:e=>{ename=e.target.value}});
   const ms=h("div",{class:"seg"}),pm=()=>ms.replaceChildren(...[["x","📝 Kiểm tra (chấm khi nộp bài)"],["p","📚 Luyện tập (hiện đúng/sai ngay)"]].map(([k,t])=>h("button",{class:em===k?"on":"",onclick:()=>{em=k;pm()}},t)));pm();
   const ci=h("input",{type:"datetime-local",value:eclose,oninput:e=>{eclose=e.target.value},style:"max-width:250px"});
   const qc=h("div",{class:"seg",style:"margin-top:6px"},[30,60,90,120].map(m=>h("button",{onclick:()=>{eclose=toLocal(Date.now()+m*60000);ci.value=eclose}},"Sau "+m+" phút")),h("button",{onclick:()=>{eclose="";ci.value=""}},"Không tự đóng"));
@@ -338,18 +377,19 @@ function teacher(){
   const cp=async(txt,el)=>{try{await navigator.clipboard.writeText(txt);el.textContent="Đã sao chép ✓"}catch(e){el.textContent="Hãy tự sao chép: "+txt}};
   const need=c=>{if(!c.ls.length){msg2.textContent="Hãy chọn ít nhất một bài.";return false}if(!ENDPOINT){msg2.textContent="Chưa nối Google Sheet.";return false}return true};
   const resetForm=()=>{es=new Set([1]);en=20;et=20;em="x";eu=false;ename="";eshow=true;eclose="";elk=deriveElk()};
+  const defName=c=>ename.trim()||lessonLabel(fmtL(c.ls));
   const mk=async()=>{const c=cfg();if(!need(c))return;
-   const code=genCode(),k=eu?5:1,seeds=genSeeds(k),row=[code,ename.trim(),fmtL(c.ls),c.n,c.t,c.mode,k,seeds,eshow?"Mở":"Ẩn",Date.now(),0,closeMs(),lockOf()?1:0];
+   const code=genCode(),k=eu?5:1,seeds=genSeeds(k),row=[code,defName(c),fmtL(c.ls),c.n,c.t,c.mode,k,seeds,eshow?"Mở":"Ẩn",Date.now(),0,closeMs(),0];
    data.exams.push(row);ok2={code,link:base()+"#de-"+code,k};draw();
-   try{const d=await jsonp({pin,action:"addexam",code,name:row[1],ls:row[2],n:c.n,t:c.t,mode:c.mode,k,seeds,hide:eshow?0:1,close:row[11],lock:row[12]});if(!d.ok)throw 0}
+   try{const d=await jsonp({pin,action:"addexam",code,name:row[1],ls:row[2],n:c.n,t:c.t,mode:c.mode,k,seeds,hide:eshow?0:1,close:row[11]});if(!d.ok)throw 0}
    catch(e){const i=data.exams.indexOf(row);if(i>=0)data.exams.splice(i,1);ok2=null;note="Không tạo được đề, hãy thử lại.";draw()}};
   const save=async()=>{const c=cfg();if(!need(c))return;const r=data.exams.find(x=>x[0]===editing);if(!r){editing=null;draw();return}
    const k=eu?5:1,seeds=(Number(r[6])===k&&r[7])?String(r[7]):genSeeds(k),old=r.slice(),code=editing;
-   r[1]=ename.trim();r[2]=fmtL(c.ls);r[3]=c.n;r[4]=c.t;r[5]=c.mode;r[6]=k;r[7]=seeds;if(r[8]!=="Đóng")r[8]=eshow?"Mở":"Ẩn";r[11]=closeMs();r[12]=lockOf()?1:0;
+   r[1]=defName(c);r[2]=fmtL(c.ls);r[3]=c.n;r[4]=c.t;r[5]=c.mode;r[6]=k;r[7]=seeds;if(r[8]!=="Đóng")r[8]=eshow?"Mở":"Ẩn";r[11]=closeMs();
    editing=null;resetForm();draw();
-   try{const d=await jsonp({pin,action:"updateexam",code,name:r[1],ls:r[2],n:r[3],t:r[4],mode:r[5],k,seeds,hide:eshow?0:1,close:r[11],lock:r[12]});if(!d.ok)throw 0}
+   try{const d=await jsonp({pin,action:"updateexam",code,name:r[1],ls:r[2],n:r[3],t:r[4],mode:r[5],k,seeds,hide:eshow?0:1,close:r[11]});if(!d.ok)throw 0;note="Đã cập nhật đề ✓";draw()}
    catch(e){for(let i=0;i<old.length;i++)r[i]=old[i];note="Không lưu được thay đổi, hãy thử lại.";draw()}};
-  const startEdit=r=>{editing=r[0];ename=r[1]||"";es=new Set(parseL(r[2]));en=r[3];et=r[4];em=r[5]==="p"?"p":"x";eu=Number(r[6])>1;eshow=r[8]!=="Ẩn";eclose=r[11]>0?toLocal(r[11]):"";elk=new Set(Number(r[12])===1?parseL(r[2]):[]);tab="e";draw();scrollTo(0,0)};
+  const startEdit=r=>{editing=r[0];ename=r[1]||"";es=new Set(parseL(r[2]));en=r[3];et=r[4];em=r[5]==="p"?"p":"x";eu=Number(r[6])>1;eshow=r[8]!=="Ẩn";eclose=r[11]>0?toLocal(r[11]):"";tab="e";draw();scrollTo(0,0)};
   const stt=async(c,s,cl)=>{const r=data.exams.find(x=>x[0]===c);if(!r)return;const o=[r[8],r[11]];r[8]=s;if(cl)r[11]=0;draw();
    try{const d=await jsonp({pin,action:"examstatus",code:c,st:s,clearclose:cl?1:0});if(!d.ok)throw 0}catch(e){r[8]=o[0];r[11]=o[1];note="Không cập nhật được, hãy thử lại.";draw()}};
   const del=async c=>{const i=data.exams.findIndex(x=>x[0]===c);if(i<0)return;const r=data.exams.splice(i,1)[0];draw();
@@ -363,45 +403,45 @@ function teacher(){
    h("div",{style:"word-break:break-all;margin:6px 0"},ok2.link),(()=>{const b=h("button",{class:"bb blue"},"🔗 Sao chép link");b.onclick=()=>cp(ok2.link,b);return b})()):null;
   const fa=h("input",{type:"number",min:1,max:25,placeholder:"13",style:"width:72px"}),fb=h("input",{type:"number",min:1,max:25,placeholder:"25",style:"width:72px"});
   const rngRow=h("div",{class:"seg",style:"justify-content:center;align-items:center;margin-top:8px"},h("span",{class:"mute"},"Từ bài"),fa,h("span",{class:"mute"},"đến bài"),fb,h("button",{onclick:()=>{const a=Math.max(1,+fa.value||1),b=Math.min(25,+fb.value||a);rg(Math.min(a,b),Math.max(a,b))()}},"Chọn khoảng"));
-  const saveLocks=async()=>{if(!es.size){msg2.textContent="Hãy chọn các bài cần lưu khóa.";return}if(!ENDPOINT){msg2.textContent="Chưa nối Google Sheet.";return}
-   const on=[],off=[];
-   data.exams.forEach(r=>{const L=parseL(r[2]);if(!L.length||!L.every(x=>es.has(x)))return;const want=L.some(x=>elk.has(x))?1:0;if(Number(r[12])===want)return;(want?on:off).push(r)});
-   if(!on.length&&!off.length){msg2.textContent="Không có đề đã tạo nào cần đổi trạng thái khóa.";return}
-   const old=[...on,...off].map(r=>[r,r[12]]);on.forEach(r=>{r[12]=1});off.forEach(r=>{r[12]=0});draw();
-   try{if(on.length){const d=await jsonp({pin,action:"examlocks",codes:on.map(r=>r[0]).join(","),lock:1});if(!d.ok)throw 0}
-    if(off.length){const d=await jsonp({pin,action:"examlocks",codes:off.map(r=>r[0]).join(","),lock:0});if(!d.ok)throw 0}
-    note="Đã lưu khóa cho "+(on.length+off.length)+" đề ✓";draw()}
-   catch(e){old.forEach(([r,o])=>{r[12]=o});note="Không lưu được khóa, hãy thử lại.";draw()}};
-  const lkNote=h("div",{class:"mute",style:"font-size:.8rem;text-align:center;margin-top:6px"},"Dấu 🔒 áp dụng cho đề mới khi bấm Tạo đề. Với đề đã tạo, bấm “Lưu khóa cho các đề đã tạo” để cập nhật.");
-  const lkRow=h("div",{class:"seg",style:"justify-content:center;margin-top:8px"},h("button",{class:"bb amber",onclick:()=>{es.forEach(x=>elk.add(x));g.paint();upd()}},"🔒 Khóa các bài đã chọn"),h("button",{class:"bb green",onclick:()=>{es.forEach(x=>elk.delete(x));g.paint();upd()}},"🔓 Bỏ khóa các bài đã chọn"),h("button",{class:"bb teal",onclick:saveLocks},"💾 Lưu khóa cho các đề đã tạo"));
-  const lck=async(c,v)=>{const r=data.exams.find(x=>x[0]===c);if(!r)return;const o=r[12];r[12]=v;if(!editing)elk=deriveElk();draw();try{const d=await jsonp({pin,action:"examlock",code:c,lock:v});if(!d.ok)throw 0}catch(e){r[12]=o;if(!editing)elk=deriveElk();note="Không cập nhật được, hãy thử lại.";draw()}};
+  const regSave=async()=>{const val=fmtL([...elk].sort((a,b)=>a-b));data.locked=val;note="Đang đồng bộ khóa…";draw();
+   try{const d=await jsonp({pin,action:"setlocks",locked:val});if(!d.ok)throw 0;note="Đã lưu và đồng bộ khóa ✓ (giao diện làm bài cập nhật trong khoảng 30 giây)";draw()}
+   catch(e){note="Không đồng bộ được khóa, hãy thử lại.";draw()}};
+  const lck=(c,v)=>{const r=data.exams.find(x=>x[0]===c);if(!r)return;parseL(r[2]).forEach(x=>{v?elk.add(x):elk.delete(x)});regSave()};
+  const isLk=s=>parseL(s).some(x=>elk.has(x));
+  const lkNote=h("div",{class:"mute",style:"font-size:.8rem;text-align:center;margin-top:6px"},"Khóa được cài theo bài: tự lưu và áp dụng cho mọi đề có chứa bài đó trên giao diện làm bài. Mặc định không khóa bài nào.");
+  const lkRow=h("div",{class:"seg",style:"justify-content:center;margin-top:8px"},h("button",{class:"bb amber",onclick:()=>{if(!es.size){msg2.textContent="Hãy chọn bài cần khóa.";return}es.forEach(x=>elk.add(x));regSave()}},"🔒 Khóa các bài đã chọn"),h("button",{class:"bb green",onclick:()=>{if(!es.size){msg2.textContent="Hãy chọn bài cần mở khóa.";return}es.forEach(x=>elk.delete(x));regSave()}},"🔓 Bỏ khóa các bài đã chọn"),h("button",{class:"bb teal",onclick:regSave},"💾 Lưu và đồng bộ khóa"));
   const bulk=h("button",{},"⚡ Tạo mỗi bài một đề");let barm=false;
   bulk.onclick=async()=>{const c=cfg();if(!need(c))return;
    if(!barm){barm=true;bulk.textContent="Tạo "+c.ls.length+" đề? Bấm lần nữa";setTimeout(()=>{barm=false;bulk.textContent="⚡ Tạo mỗi bài một đề"},3500);return}
    barm=false;bulk.disabled=true;bulk.textContent="Đang tạo…";
-   try{const d=await jsonp({pin,action:"bulkexams",ls:fmtL(c.ls),n:c.n,t:c.t,mode:c.mode,k:eu?5:1,hide:eshow?0:1,locks:fmtL([...elk].sort((a,b)=>a-b))});if(!d.ok)throw 0;
+   try{const d=await jsonp({pin,action:"bulkexams",ls:fmtL(c.ls),n:c.n,t:c.t,mode:c.mode,k:eu?5:1,hide:eshow?0:1});if(!d.ok)throw 0;
     note="Đã tạo "+d.made+" đề"+(d.skipped?", bỏ qua "+d.skipped+" bài đã có đề":"")+".";await load()}
    catch(e){note="Không tạo được, hãy thử lại.";draw()}};
   upd();
   const eff=r=>r[8]==="Đóng"?"Đóng":(r[11]>0&&Date.now()>r[11]?"Hết giờ":r[8]),LB={"Mở":"Mở · hiện trên trang chủ","Ẩn":"Mở · ẩn khỏi trang chủ","Đóng":"Đã đóng","Hết giờ":"Đã tự đóng (hết giờ)"};
   const rows=data.exams.slice().reverse();
-  return[h("div",{class:"card"},h("h2",{style:"margin-top:0"},editing?"✏️ Sửa đề "+editing:"Thiết lập đề thi"),h("label",{},"Tên đề (không bắt buộc)"),nm,
+  const rowEl=r=>{const s=eff(r),c=r[0],lk=isLk(r[2]);
+   const ti=h("input",{type:"text",value:r[1]||"",placeholder:lessonLabel(r[2]),style:"min-width:150px;max-width:250px"}),sv=h("button",{class:"bb gray",disabled:true},"💾 Lưu");
+   ti.oninput=()=>{sv.className="bb green";sv.disabled=false};
+   sv.onclick=async()=>{const nv=ti.value.trim()||lessonLabel(r[2]),o=r[1];r[1]=nv;sv.disabled=true;sv.textContent="Đang lưu…";
+    try{const d=await jsonp({pin,action:"examname",code:c,name:nv});if(!d.ok)throw 0;note="Đã lưu tên đề ✓";draw()}catch(e){r[1]=o;note="Không lưu được tên đề, hãy thử lại.";draw()}};
+   return h("tr",{class:editing===c?"edrow":""},h("td",{},h("b",{style:"letter-spacing:.1em"},c)),h("td",{},h("div",{style:"display:flex;gap:6px;align-items:center"},ti,sv)),h("td",{},lessonLabel(r[2])+(lk?" 🔒":"")),h("td",{},r[3]),h("td",{},r[4]?r[4]+" phút":"Không giới hạn"),h("td",{},r[5]==="p"?"Luyện tập":"Kiểm tra"),h("td",{},Number(r[6])>1?r[6]+" mã đề":"1 mã đề"),
+    h("td",{class:s==="Mở"||s==="Ẩn"?"":"red"},LB[s]||s,r[11]>0?h("small",{},"Đóng lúc "+fT(r[11])):null),
+    h("td",{style:"white-space:normal"},h("div",{class:"acts"},(()=>{const b=h("button",{class:"bb blue"},"🔗 Sao chép link");b.onclick=()=>cp(base()+"#de-"+c,b);return b})(),
+     h("button",{class:"bb purple",onclick:()=>lck(c,lk?0:1)},lk?"🔓 Bỏ khóa":"🔒 Khóa"),
+     s==="Mở"?h("button",{class:"bb amber",onclick:()=>stt(c,"Ẩn")},"🙈 Ẩn khỏi trang chủ"):s==="Ẩn"?h("button",{class:"bb amber",onclick:()=>stt(c,"Mở")},"👁 Hiện trên trang chủ"):null,
+     s==="Đóng"?h("button",{class:"bb green",onclick:()=>stt(c,"Mở")},"▶ Mở đề"):s==="Hết giờ"?h("button",{class:"bb green",onclick:()=>stt(c,"Mở",1)},"▶ Mở lại"):h("button",{class:"bb red",onclick:()=>stt(c,"Đóng")},"⏹ Đóng đề"),
+     h("button",{class:"bb teal",onclick:()=>startEdit(r)},"✏️ Sửa"),delBtn(c))))};
+  return[h("div",{class:"card"},h("h2",{style:"margin-top:0"},editing?"✏️ Sửa đề "+editing:"Thiết lập đề thi"),h("label",{},"Tên đề (học viên nhìn thấy)"),nm,
     h("label",{style:"text-align:center;margin-top:16px"},"Chọn bài"),quick,rngRow,g.el,lkRow,lkNote,sum,
     h("div",{class:"row",style:"max-width:480px;margin:10px auto 0"},h("div",{},h("label",{},"Số câu"),nI),h("div",{},h("label",{},"Thời gian làm bài (phút, 0 = không giới hạn)"),tI)),
     h("div",{style:"max-width:480px;margin:6px auto 0"},h("label",{},"Chế độ"),ms,
-     h("label",{style:"font-weight:400;margin-top:12px"},h("input",{type:"checkbox",checked:eu,onchange:e=>{eu=e.target.checked}})," Đề riêng cho từng học sinh (chia 5 mã đề khác nhau, chống quay cóp)"),
-     h("label",{style:"font-weight:400;margin-top:8px"},h("input",{type:"checkbox",checked:eshow,onchange:e=>{eshow=e.target.checked}})," Hiện trên trang chủ để học sinh tự chọn (bỏ tích nếu chỉ giao bằng link)"),
+     h("label",{style:"font-weight:400;margin-top:12px"},h("input",{type:"checkbox",checked:eu,onchange:e=>{eu=e.target.checked}}),` Đề riêng cho từng học sinh (chia 5 mã đề khác nhau, chống quay cóp)`),
+     h("label",{style:"font-weight:400;margin-top:8px"},h("input",{type:"checkbox",checked:eshow,onchange:e=>{eshow=e.target.checked}}),` Hiện trên trang chủ để học sinh tự chọn (bỏ tích nếu chỉ giao bằng link)`),
      h("label",{style:"margin-top:12px"},"Tự động đóng đề vào lúc (để trống nếu không cần)"),ci,qc),
     h("div",{class:"seg",style:"justify-content:center;margin-top:16px"},editing?[h("button",{class:"cta solid",style:"width:auto;margin:0;padding:10px 22px",onclick:save},"💾 Cập nhật đề"),h("button",{onclick:()=>{editing=null;resetForm();draw()}},"Hủy")]:[h("button",{class:"cta solid",style:"width:auto;margin:0;padding:10px 22px",onclick:mk},"Tạo đề và lấy mã"),h("button",{onclick:trial},"Làm thử"),h("button",{onclick:quickLink},"Tạo link giao nhanh"),bulk]),msg2),
    okBox,
-   h("div",{class:"card"},h("h2",{style:"margin-top:0"},"Đề đã tạo"),rows.length?h("div",{class:"sc"},h("table",{class:"tbl"},h("tr",{},["Mã","Tên đề","Bài","Số câu","Thời gian","Chế độ","Mã đề","Trạng thái","Thao tác"].map(x=>h("th",{},x))),
-    rows.map(r=>{const s=eff(r),c=r[0];return h("tr",{class:editing===c?"edrow":""},h("td",{},h("b",{style:"letter-spacing:.1em"},c)),h("td",{},r[1]),h("td",{},lessonLabel(r[2])+(Number(r[12])===1?" 🔒":"")),h("td",{},r[3]),h("td",{},r[4]?r[4]+" phút":"Không giới hạn"),h("td",{},r[5]==="p"?"Luyện tập":"Kiểm tra"),h("td",{},Number(r[6])>1?r[6]+" mã đề":"1 mã đề"),
-     h("td",{class:s==="Mở"||s==="Ẩn"?"":"red"},LB[s]||s,r[11]>0?h("small",{},"Đóng lúc "+fT(r[11])):null),
-     h("td",{style:"white-space:normal"},h("div",{class:"acts"},(()=>{const b=h("button",{class:"bb blue"},"🔗 Sao chép link");b.onclick=()=>cp(base()+"#de-"+c,b);return b})(),
-      h("button",{class:"bb purple",onclick:()=>lck(c,Number(r[12])===1?0:1)},Number(r[12])===1?"🔓 Bỏ khóa":"🔒 Khóa"),
-      s==="Mở"?h("button",{class:"bb amber",onclick:()=>stt(c,"Ẩn")},"🙈 Ẩn khỏi trang chủ"):s==="Ẩn"?h("button",{class:"bb amber",onclick:()=>stt(c,"Mở")},"👁 Hiện trên trang chủ"):null,
-      s==="Đóng"?h("button",{class:"bb green",onclick:()=>stt(c,"Mở")},"▶ Mở đề"):s==="Hết giờ"?h("button",{class:"bb green",onclick:()=>stt(c,"Mở",1)},"▶ Mở lại"):h("button",{class:"bb red",onclick:()=>stt(c,"Đóng")},"⏹ Đóng đề"),
-      h("button",{class:"bb teal",onclick:()=>startEdit(r)},"✏️ Sửa"),delBtn(c))))}))):h("p",{class:"mute"},"Chưa có đề nào."))]
+   h("div",{class:"card"},h("h2",{style:"margin-top:0"},"Đề đã tạo"),rows.length?h("div",{class:"sc"},h("table",{class:"tbl"},h("tr",{},["Mã","Tên đề","Bài","Số câu","Thời gian","Chế độ","Mã đề","Trạng thái","Thao tác"].map(x=>h("th",{},x))),rows.map(rowEl))):h("p",{class:"mute"},"Chưa có đề nào."))]
  }
  function pf(){
   const a=h("input",{type:"password",placeholder:"Mã PIN mới (ít nhất 4 ký tự)"}),b=h("input",{type:"password",placeholder:"Nhập lại mã PIN mới"}),m=h("div",{class:"mute",style:"margin-top:8px"});
@@ -415,8 +455,8 @@ function teacher(){
    catch(e){m.textContent="Không kết nối được, hãy thử lại."}};
   return[h("div",{class:"card",style:"max-width:420px"},h("h2",{},"Đổi mã PIN"),a,h("p"),b,h("p"),h("button",{class:"pri",onclick:go},"Lưu mã PIN mới"),m)]}
  function draw(){
-  const tb=h("div",{class:"seg"},h("button",{class:tab==="m"?"on":"",onclick:()=>{tab="m";draw()}},"Giám sát phòng thi"),h("button",{class:tab==="r"?"on":"",onclick:()=>{tab="r";draw()}},"Kết quả"),h("button",{class:tab==="e"?"on":"",onclick:()=>{tab="e";draw()}},"Tạo đề thi"),h("button",{class:tab==="k"?"on":"",onclick:()=>{tab="k";draw();if(!contacts)loadContacts()}},"Liên hệ (SĐT)"),h("button",{onclick:load},"Làm mới"),h("button",{class:tab==="p"?"on":"",onclick:()=>{tab="p";draw()}},"Đổi mã PIN"));
-  box.replaceChildren(tb,...(tab==="m"?mon():tab==="r"?res():tab==="e"?ex():tab==="k"?kz():pf()))}
+  const tb=h("div",{class:"seg"},h("button",{class:tab==="m"?"on":"",onclick:()=>{tab="m";draw()}},"Giám sát phòng thi"),h("button",{class:tab==="r"?"on":"",onclick:()=>{tab="r";draw()}},"Kết quả"),h("button",{class:tab==="e"?"on":"",onclick:()=>{tab="e";draw()}},"Tạo đề thi"),h("button",{class:tab==="k"?"on":"",onclick:()=>{tab="k";draw();if(!contacts)loadContacts()}},"Liên hệ (SĐT)"),h("button",{class:tab==="f"?"on":"",onclick:()=>{tab="f";draw();if(!feedbacks)loadFb()}},"💬 Góp ý"+fbN()),h("button",{onclick:load},"Làm mới"),h("button",{class:tab==="p"?"on":"",onclick:()=>{tab="p";draw()}},"Đổi mã PIN"));
+  box.replaceChildren(tb,...(tab==="m"?mon():tab==="r"?res():tab==="e"?ex():tab==="k"?kz():tab==="f"?fv():pf()))}
  pi.onkeydown=e=>{if(e.key==="Enter")load()};
  app.replaceChildren(h("h1",{},"🔒 Quản trị"),h("div",{class:"card"},h("div",{class:"row",style:"align-items:center"},pi,h("button",{class:"pri",onclick:load},"Đăng nhập"),h("button",{onclick:()=>{stop();location.hash="";setup()}},"← Về trang làm bài")),msg,vw),box);
  if(pin)load();
