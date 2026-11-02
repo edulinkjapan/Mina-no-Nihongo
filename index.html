@@ -169,13 +169,13 @@ function setup(){
    er,ok,h("div",{style:"text-align:center;margin-top:8px"},h("button",{style:"border:0;background:none;color:var(--mute)",onclick:()=>m.remove()},"Để sau"))));
   document.body.append(m);ph.focus()}
  const tileEl=(c,ls,t,lf,nm)=>{const lk=gated(lf),ttl=String(nm||"").trim()||lessonLabel(ls);return h("button",{class:"tile"+(sel===c?" on":"")+(lk?" lock":""),onclick:()=>{if(lk){if(needInfo())return;openUnlock(()=>{sel=c;paintList()},ttl);return}sel=c;paintList()}},
-   h("b",{},ttl),h("small",{},"⏱ "+(t?t+" phút":"Không giới hạn giờ")),lk?h("small",{class:"lkt"},"🔒 Cần mở khóa"):null)};
+   h("b",{},ttl),h("small",{},"⏱ "+(t?t+" phút":"Không giới hạn giờ")),lk?h("small",{class:"lkt"},"🔒 Cần mở khóa"):(!hc&&!fx&&isUnl()&&Number(lf)===1?h("small",{class:"lkt",style:"color:var(--grn)"},"🔓 Đã mở khóa"):null))};
  function paintList(){
   if(hc){lst.replaceChildren(hinfo?h("div",{class:"tiles"},tileEl(sel,hinfo.ls,hinfo.t,0)):h("div",{class:"mute"},hinfo===false?"Bài trong đường link không đúng hoặc đã đóng.":"Đang tải bài…"));return}
   if(items===null){lst.replaceChildren(h("div",{class:"mute"},"Đang tải danh sách bài…"));return}
   if(!items.length){lst.replaceChildren(h("div",{class:"mute"},"Hiện chưa có bài nào đang mở. Vui lòng chờ giáo viên mở bài."));return}
-  const any=items.some(r=>gated(r[3]));
-  lst.replaceChildren(h("div",{class:"tiles"},items.map(r=>tileEl(String(r[0]).toUpperCase(),r[1],r[2],r[3],r[4]))),any?h("div",{class:"mute",style:"font-size:.8rem"},"🔒 Bài có ổ khóa: để lại số điện thoại một lần để mở khóa."):null)}
+  const anyL=!hc&&!fx&&items.some(r=>Number(r[3])===1);
+  lst.replaceChildren(h("div",{class:"tiles"},items.map(r=>tileEl(String(r[0]).toUpperCase(),r[1],r[2],r[3],r[4]))),anyL?h("div",{class:"mute",style:"font-size:.8rem"},isUnl()?"🔓 Thiết bị này đã mở khóa các bài có ổ khóa.":"🔒 Bài có ổ khóa: để lại số điện thoại một lần để mở khóa."):null)}
  async function loadList(){items=null;paintList();try{const d=await jsonp({action:"exams"});items=d.ok&&d.exams?d.exams:[]}catch(e){items=[]}paintList()}
  async function loadOne(){hinfo=null;paintList();try{const d=await jsonp({action:"exam",code:hc.toUpperCase()});hinfo=d.ok?{ls:d.cfg.ls,t:d.cfg.t}:false}catch(e){hinfo=false}paintList()}
  async function go(){
@@ -213,7 +213,12 @@ function setup(){
    pick,err,goBtn),
   h("p",{class:"mute",style:"text-align:center;font-size:.82rem"},ENDPOINT?"Kết quả được gửi tự động cho giáo viên khi nộp bài. Việc rời khỏi trang trong lúc làm bài sẽ được ghi lại.":"Kết quả hiển thị ngay sau khi nộp bài."));
  if(sv&&!sv.done&&sv.cfg){const rb=h("button",{class:"pri",onclick:()=>{S=Object.assign({},sv,{items:build(sv.cfg)});quiz()}},"Tiếp tục bài đang làm dở");app.insertBefore(h("div",{class:"card",style:"max-width:620px;margin:14px auto;text-align:center"},rb),app.children[2])}
- if(fx)return;if(hc)loadOne();else if(ENDPOINT)loadList();else paintList();
+ if(fx)return;if(hc){loadOne();return}
+ if(ENDPOINT){loadList();
+  const poll=async()=>{if(!document.body.contains(lst)){clearInterval(pt);document.removeEventListener("visibilitychange",vc);return}if(document.hidden||document.querySelector(".mdl"))return;
+   try{const d=await jsonp({action:"exams"});if(d.ok&&d.exams){items=d.exams;paintList()}}catch(e){}};
+  const pt=setInterval(poll,15000),vc=()=>{if(!document.hidden)poll()};document.addEventListener("visibilitychange",vc)}
+ else paintList();
 }
 function save(){LS.set({cfg:S.cfg,name:S.name,cls:S.cls,ans:S.ans,i:S.i,start:S.start,done:S.done,lv:S.lv,lt:S.lt,sid:S.sid})}
 const fmt=s=>{s=Math.max(0,Math.round(s));return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")};
@@ -404,12 +409,12 @@ function teacher(){
   const fa=h("input",{type:"number",min:1,max:25,placeholder:"13",style:"width:72px"}),fb=h("input",{type:"number",min:1,max:25,placeholder:"25",style:"width:72px"});
   const rngRow=h("div",{class:"seg",style:"justify-content:center;align-items:center;margin-top:8px"},h("span",{class:"mute"},"Từ bài"),fa,h("span",{class:"mute"},"đến bài"),fb,h("button",{onclick:()=>{const a=Math.max(1,+fa.value||1),b=Math.min(25,+fb.value||a);rg(Math.min(a,b),Math.max(a,b))()}},"Chọn khoảng"));
   const regSave=async()=>{const val=fmtL([...elk].sort((a,b)=>a-b));data.locked=val;note="Đang đồng bộ khóa…";draw();
-   try{const d=await jsonp({pin,action:"setlocks",locked:val});if(!d.ok)throw 0;note="Đã lưu và đồng bộ khóa ✓ (giao diện làm bài cập nhật trong khoảng 30 giây)";draw()}
+   try{const d=await jsonp({pin,action:"setlocks",locked:val});if(!d.ok)throw 0;note="Đã lưu và đồng bộ khóa ✓ (giao diện làm bài tự cập nhật trong khoảng 30–45 giây)";draw()}
    catch(e){note="Không đồng bộ được khóa, hãy thử lại.";draw()}};
   const lck=(c,v)=>{const r=data.exams.find(x=>x[0]===c);if(!r)return;parseL(r[2]).forEach(x=>{v?elk.add(x):elk.delete(x)});regSave()};
   const isLk=s=>parseL(s).some(x=>elk.has(x));
-  const lkNote=h("div",{class:"mute",style:"font-size:.8rem;text-align:center;margin-top:6px"},"Khóa được cài theo bài: tự lưu và áp dụng cho mọi đề có chứa bài đó trên giao diện làm bài. Mặc định không khóa bài nào.");
-  const lkRow=h("div",{class:"seg",style:"justify-content:center;margin-top:8px"},h("button",{class:"bb amber",onclick:()=>{if(!es.size){msg2.textContent="Hãy chọn bài cần khóa.";return}es.forEach(x=>elk.add(x));regSave()}},"🔒 Khóa các bài đã chọn"),h("button",{class:"bb green",onclick:()=>{if(!es.size){msg2.textContent="Hãy chọn bài cần mở khóa.";return}es.forEach(x=>elk.delete(x));regSave()}},"🔓 Bỏ khóa các bài đã chọn"),h("button",{class:"bb teal",onclick:regSave},"💾 Lưu và đồng bộ khóa"));
+  const lkNote=h("div",{class:"mute",style:"font-size:.8rem;text-align:center;margin-top:6px"},"Khóa được cài theo bài: tự lưu và áp dụng cho mọi đề có chứa bài đó trên giao diện làm bài. Nếu máy này từng nhập số điện thoại để thử thì sẽ không thấy ổ khóa; bấm “Đặt lại mở khóa trên máy này” hoặc xem bằng cửa sổ ẩn danh.");
+  const lkRow=h("div",{class:"seg",style:"justify-content:center;margin-top:8px"},h("button",{class:"bb amber",onclick:()=>{if(!es.size){msg2.textContent="Hãy chọn bài cần khóa.";return}es.forEach(x=>elk.add(x));regSave()}},"🔒 Khóa các bài đã chọn"),h("button",{class:"bb green",onclick:()=>{if(!es.size){msg2.textContent="Hãy chọn bài cần mở khóa.";return}es.forEach(x=>elk.delete(x));regSave()}},"🔓 Bỏ khóa các bài đã chọn"),h("button",{class:"bb teal",onclick:regSave},"💾 Lưu và đồng bộ khóa"),h("button",{class:"bb gray",onclick:()=>{try{localStorage.removeItem("minna_unlock");localStorage.removeItem("minna_phone")}catch(e){}msg2.textContent="Đã đặt lại: máy này sẽ thấy ổ khóa như học viên mới, hãy mở lại trang chủ."}},"🔄 Đặt lại mở khóa trên máy này"));
   const bulk=h("button",{},"⚡ Tạo mỗi bài một đề");let barm=false;
   bulk.onclick=async()=>{const c=cfg();if(!need(c))return;
    if(!barm){barm=true;bulk.textContent="Tạo "+c.ls.length+" đề? Bấm lần nữa";setTimeout(()=>{barm=false;bulk.textContent="⚡ Tạo mỗi bài một đề"},3500);return}
